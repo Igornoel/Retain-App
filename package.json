@@ -1,0 +1,14 @@
+{
+  "name": "retain-workspace",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix react-retain-app install",
+    "dev": "npm --prefix react-retain-app run dev",
+    "server": "npm --prefix react-retain-app run server",
+    "build": "npm --prefix react-retain-app run build",
+    "lint": "npm --prefix react-retain-app run lint",
+    "admin:promote": "npm --prefix react-retain-app run admin:promote --",
+    "db:up": "docker compose -f react-retain-app/docker-compose.yml up -d",
+    "db:down": "docker compose -f react-retain-app/docker-compose.yml down"
+  }
+}
