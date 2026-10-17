@@ -21,8 +21,11 @@ pool.on('error', (error) => console.error('Idle PostgreSQL client error:', error
 
 export async function migrate() {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  const migration = await fs.readFile(path.join(currentDir, 'migrations', '001_initial.sql'), 'utf8');
-  await pool.query(migration);
+  const migrationsDir = path.join(currentDir, 'migrations');
+  const migrations = (await fs.readdir(migrationsDir)).filter((file) => file.endsWith('.sql')).sort();
+  for (const migration of migrations) {
+    await pool.query(await fs.readFile(path.join(migrationsDir, migration), 'utf8'));
+  }
 }
 
 export async function inTransaction(callback) {

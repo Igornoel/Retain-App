@@ -16,7 +16,13 @@ app.use(express.json({ limit: '1mb' }));
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 const makeId = () => crypto.randomUUID();
 const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
-const safeUser = (row) => ({ id: row.id, name: row.name, email: row.email, role: row.role });
+const safeUser = (row) => ({
+  id: row.id,
+  name: row.name,
+  email: row.email,
+  role: row.role,
+  dateOfBirth: row.date_of_birth ? String(row.date_of_birth).slice(0, 10) : null,
+});
 const expenseDto = (row) => ({
   id: row.id,
   userId: row.user_id,
@@ -54,7 +60,7 @@ const requireAuth = asyncRoute(async (req, res, next) => {
   const token = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return res.status(401).json({ error: 'Sign in required' });
   const result = await pool.query(
-    `SELECT u.id, u.name, u.email, u.role, s.token_hash
+    `SELECT u.id, u.name, u.email, u.role, u.date_of_birth, s.token_hash
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = $1 AND s.expires_at > now()`,
     [tokenHash(token)],
@@ -79,16 +85,24 @@ app.post('/api/auth/signup', asyncRoute(async (req, res) => {
   const name = String(req.body.name || '').trim();
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
-  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8) {
-    return res.status(400).json({ error: 'Enter your name, a valid email, and a password with at least 8 characters.' });
+  const dateOfBirth = String(req.body.dateOfBirth || '');
+  const monthlyBudget = Number(req.body.monthlyBudget);
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8
+    || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) || dateOfBirth >= new Date().toISOString().slice(0, 10)
+    || !Number.isFinite(monthlyBudget) || monthlyBudget <= 0) {
+    return res.status(400).json({ error: 'Enter your name, valid email, a password of at least 8 characters, date of birth, and a positive monthly budget.' });
   }
   const user = { id: makeId(), name, email, passwordHash: await hashPassword(password) };
   await pool.query(
-    'INSERT INTO users (id, name, email, password_hash) VALUES ($1, $2, $3, $4)',
-    [user.id, user.name, user.email, user.passwordHash],
+    'INSERT INTO users (id, name, email, password_hash, date_of_birth) VALUES ($1, $2, $3, $4, $5::date)',
+    [user.id, user.name, user.email, user.passwordHash, dateOfBirth],
+  );
+  await pool.query(
+    'INSERT INTO budgets (user_id, month, amount) VALUES ($1, $2, $3)',
+    [user.id, new Date().toISOString().slice(0, 7), monthlyBudget],
   );
   const token = await createSession(user.id);
-  res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: 'user' } });
+  res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: 'user', dateOfBirth } });
 }));
 
 app.post('/api/auth/login', asyncRoute(async (req, res) => {
@@ -109,6 +123,19 @@ app.post('/api/auth/logout', requireAuth, asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/auth/me', requireAuth, (req, res) => res.json(req.user));
+
+app.patch('/api/auth/profile', requireAuth, asyncRoute(async (req, res) => {
+  const name = String(req.body.name || '').trim();
+  const dateOfBirth = String(req.body.dateOfBirth || '');
+  if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) || dateOfBirth >= new Date().toISOString().slice(0, 10)) {
+    return res.status(400).json({ error: 'Enter your name and a valid date of birth in the past.' });
+  }
+  const result = await pool.query(
+    'UPDATE users SET name=$1, date_of_birth=$2::date WHERE id=$3 RETURNING id, name, email, role, date_of_birth',
+    [name, dateOfBirth, req.user.id],
+  );
+  res.json(safeUser(result.rows[0]));
+}));
 
 app.get('/api/expenses', requireAuth, asyncRoute(async (req, res) => {
   const conditions = [];

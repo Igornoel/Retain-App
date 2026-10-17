@@ -39,9 +39,10 @@ export interface AdminInsights {
 }
 
 export const api = {
-  signup: (name: string, email: string, password: string) => request<AuthResult>('/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, password }) }),
+  signup: (name: string, email: string, password: string, dateOfBirth: string, monthlyBudget: number) => request<AuthResult>('/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, password, dateOfBirth, monthlyBudget }) }),
   login: (email: string, password: string) => request<AuthResult>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: () => request<User>('/auth/me'),
+  updateProfile: (profile: { name: string; dateOfBirth: string }) => request<User>('/auth/profile', { method: 'PATCH', body: JSON.stringify(profile) }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   expenses: (params = 'page=1&limit=100') => request<ExpensePage>(`/expenses?${params}`),
   allExpenses: async () => {

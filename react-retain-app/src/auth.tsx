@@ -6,7 +6,8 @@ interface Auth {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, dateOfBirth: string, monthlyBudget: number) => Promise<void>;
+  updateProfile: (profile: { name: string; dateOfBirth: string }) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -27,10 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   };
 
-  const signUp = async (name: string, email: string, password: string) => {
-    const result = await api.signup(name, email, password);
+  const signUp = async (name: string, email: string, password: string, dateOfBirth: string, monthlyBudget: number) => {
+    const result = await api.signup(name, email, password, dateOfBirth, monthlyBudget);
     setToken(result.token);
     setUser(result.user);
+  };
+
+  const updateProfile = async (profile: { name: string; dateOfBirth: string }) => {
+    const updatedUser = await api.updateProfile(profile);
+    setUser(updatedUser);
   };
 
   const signOut = async () => {
@@ -40,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  return <Context.Provider value={{ user, loading, signIn, signUp, signOut }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ user, loading, signIn, signUp, updateProfile, signOut }}>{children}</Context.Provider>;
 }
 
 export function useAuth() {
