@@ -1,50 +1,126 @@
 # Retain
 
-Retain is a personal expense and monthly budget manager. The React frontend uses the Express API for authentication and financial data. PostgreSQL stores users, hashed passwords, expenses, monthly budgets, categories, and revocable server-side sessions.
+Retain is a personal expense and monthly budget manager. The frontend uses React, TypeScript, Vite, React Router, and Redux Toolkit. The Node.js and Express API handles authentication and app data. PostgreSQL stores users, budgets, categories, expenses, and server-side sessions.
+
+## Features
+
+- Sign up with name, date of birth, email, password, and an initial monthly budget; sign in and sign out
+- Edit profile details and monthly budget in Settings
+- Add, view, edit, delete, search, filter, sort, and paginate expenses
+- Review monthly spending, category breakdowns, recent transactions, and budget progress
+- Switch between light and dark appearance
+- Use the responsive mobile navigation, help panel, and monthly notification summary
+- Admin-only platform insights and category management
+- Store account and financial data in PostgreSQL; authenticate API requests with revocable server-side sessions
+
+## Requirements
+
+- Node.js 20 or newer and npm
+- Docker Desktop (for the local PostgreSQL setup), or a reachable PostgreSQL database
 
 ## Local development
 
-From the `Retain-App` directory, the root scripts below forward commands to this project. Or run the matching commands directly from `react-retain-app`.
+Run these commands from the repository root unless a step says otherwise.
 
-1. Install dependencies once with `npm run setup`.
-2. Copy `react-retain-app/.env.example` to `react-retain-app/.env`.
-3. Start PostgreSQL. With Docker installed, run `npm run db:up` from the repository root. The compose file creates a persistent local development volume.
-4. Start the API with `npm run server`.
-5. In another terminal, start Vite with `npm run dev` and visit `http://localhost:5173`.
+1. Install dependencies:
 
-The API applies the SQL schema and seeds the default categories at startup. Local Docker credentials are only for development. Set `DATABASE_URL` to a managed PostgreSQL connection string and set `DATABASE_SSL=true` for a hosted deployment. Keep credentials in the hosting provider's secret environment variables; do not commit `.env`.
+   ```sh
+   npm run setup
+   ```
 
-## Admin access
+2. Create the local environment file:
 
-Create a normal account, then run `npm run admin:promote -- your@email.com`. Sign out and sign in again. The `/admin` route is protected in the React app, and the API also checks the user's admin role before serving insights or changing categories.
+   ```sh
+   cp react-retain-app/.env.example react-retain-app/.env
+   ```
 
-## Main features
+   Adjust the values in `react-retain-app/.env` for your database and local ports. Never commit `.env`.
 
-- Sign up, sign in, sign out, and restore a session using React Context and server-side, expiring sessions
-- Add, view, update, delete, search, filter, sort, and paginate expenses; users can only manage their own records
-- Set a monthly budget and view spending, remaining amount, and budget status
-- Dashboard totals, highest expense, spending by category, and recent activity
-- Admin-only category create, update, delete (affected expenses move to Other), platform totals, top/bottom category usage, recent expenses, and recent registrations
-- Responsive React/TypeScript UI with Redux Toolkit managing expense filtering and sorting
+3. Start the local PostgreSQL database:
+
+   ```sh
+   npm run db:up
+   ```
+
+4. Start the API in one terminal:
+
+   ```sh
+   npm run server
+   ```
+
+5. Start Vite in another terminal:
+
+   ```sh
+   npm run dev
+   ```
+
+   Open the URL printed by Vite, usually `http://localhost:5173`.
+
+The API runs at `http://localhost:3001` by default. `VITE_API_URL` selects the API base URL for the frontend. `CLIENT_ORIGIN` controls which frontend origins the API accepts. If Vite uses another port (for example, `5174` because `5173` is occupied), add that full origin to `CLIENT_ORIGIN`, comma-separated, and restart the API. The API runs SQL migrations and seeds default categories on startup.
+
+Stop the local database with `npm run db:down`. Its Docker volume is persistent, so stopping the container does not remove database records.
+
+## Admin account
+
+Create a regular account, then promote it from the repository root:
+
+```sh
+npm run admin:promote -- your@email.com
+```
+
+Sign out and sign back in for the updated role to take effect. Admin routes are checked by both the frontend and API.
 
 ## API routes
+
+Protected routes require `Authorization: Bearer <token>`.
 
 | Method | Endpoint | Access |
 | --- | --- | --- |
 | `GET` | `/api/health` | Public; checks PostgreSQL connectivity |
 | `POST` | `/api/auth/signup`, `/api/auth/login` | Public |
-| `POST`, `GET` | `/api/auth/logout`, `/api/auth/me` | Signed in |
-| `GET`, `POST` | `/api/expenses` | Signed in; owner-scoped, with filters and pagination |
+| `GET` | `/api/auth/me` | Signed in |
+| `PATCH` | `/api/auth/profile` | Signed in; update name and date of birth |
+| `POST` | `/api/auth/logout` | Signed in; revoke the current session |
+| `GET`, `POST` | `/api/expenses` | Signed in; list or create expenses |
 | `PATCH`, `DELETE` | `/api/expenses/:id` | Owner or admin |
-| `GET`, `PUT` | `/api/budgets/:month` | Signed in; own budget only |
+| `GET`, `PUT` | `/api/budgets/:month` | Signed in; own monthly budget |
 | `GET` | `/api/categories` | Signed in |
 | `POST`, `PATCH`, `DELETE` | `/api/categories[/:id]` | Admin |
 | `GET` | `/api/admin/insights` | Admin |
 
-Send protected requests with `Authorization: Bearer <token>`. Expense list filters are `q`, `category`, `payment`, `from`, `to`, `sort`, `page`, and `limit`.
+Expense list filters include `q`, `category`, `payment`, `from`, `to`, `sort`, `page`, and `limit`.
 
-## Deploy
+## Deploy on Render
 
-Deploy the static Vite frontend and Node API to hosts that support each service, provision a managed PostgreSQL database, and set `DATABASE_URL`, `DATABASE_SSL`, `CLIENT_ORIGIN`, `VITE_API_URL`, `HOST`, and `PORT` in the respective environments. Build the frontend with `npm run build`. The deployed app URL should be added here after deployment.
+Deploy three resources: a PostgreSQL database, a Node web service for the API, and a Static Site for the Vite frontend. Connect the services to the GitHub repository and use the `react-retain-app` directory as the root directory for both app services.
 
-The API now requires PostgreSQL; it does not fall back to a local JSON database. The database credentials in Docker Compose are development-only. Use strong credentials and a managed database with backups for production.
+### API web service
+
+- Build command: `npm install`
+- Start command: `npm run server`
+- Set `DATABASE_URL` to the managed PostgreSQL connection string (prefer the internal URL when the services share a region).
+- Set `DATABASE_SSL` to the value required by the database provider.
+- Set `CLIENT_ORIGIN` to the full public frontend origin, such as `https://your-frontend.onrender.com` (no trailing slash).
+- Set `HOST` to `0.0.0.0`. Render supplies `PORT` automatically.
+- Optional: set `SESSION_DAYS` and `DATABASE_POOL_SIZE` as needed.
+
+The API applies database migrations and seeds default categories at startup. Set the API health check path to `/api/health`.
+
+### Static frontend
+
+- Build command: `npm install && npm run build`
+- Publish directory: `dist`
+- Add `VITE_API_URL` with the API's public base URL ending in `/api`, for example `https://your-api.onrender.com/api`.
+- Add a rewrite from `/*` to `/index.html` with status `200`, so direct links such as `/signup` and `/settings` work.
+
+Vite embeds `VITE_API_URL` during the build. Rebuild and deploy the Static Site after changing it. Keep `DATABASE_URL` and all database secrets on the API service only; never put secrets in frontend variables. Configure the matching frontend origin in the API service's `CLIENT_ORIGIN` setting.
+
+## Build locally
+
+From the repository root:
+
+```sh
+npm run build
+```
+
+The frontend build output is written to `react-retain-app/dist`.

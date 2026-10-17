@@ -1,10 +1,17 @@
-# Retain workspace
+# Retain
 
-The application lives in `react-retain-app/`. The scripts here forward to it, so you can run them from this `Retain-App` directory.
+Retain is a personal expense and monthly budget manager. It has a React and TypeScript frontend, a Node.js and Express API, and PostgreSQL storage.
 
-1. Install: `npm run setup`
-2. Start PostgreSQL: open Docker Desktop, then run `npm run db:up`
-3. Start the API in terminal 1: `npm run server`
-4. Start Vite in terminal 2: `npm run dev`
+The application and full setup guide are in [`react-retain-app/`](react-retain-app/README.md). The commands below can be run from this repository root.
 
-A local development `.env` is configured from the sample PostgreSQL settings. For production, replace `DATABASE_URL` with your managed PostgreSQL connection string and enable SSL as required by that provider. See [the app README](react-retain-app/README.md) for the database schema, API, admin setup, and deployment notes.
+## Run locally
+
+1. Install dependencies with `npm run setup`.
+2. Copy `react-retain-app/.env.example` to `react-retain-app/.env` and adjust values if needed.
+3. Start Docker Desktop and run `npm run db:up` to start the development PostgreSQL database.
+4. In one terminal, run `npm run server`.
+5. In another terminal, run `npm run dev` and open the Vite URL printed in the terminal (usually `http://localhost:5173`).
+
+If Vite selects a different port because the usual one is busy, add that origin to `CLIENT_ORIGIN` in `react-retain-app/.env` (comma-separated) and restart the API. Do not commit `.env` or use its local database credentials for production.
+
+See the [application README](react-retain-app/README.md) for features, admin setup, API routes, and deployment configuration.
