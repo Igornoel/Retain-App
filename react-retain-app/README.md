@@ -94,6 +94,8 @@ Expense list filters include `q`, `category`, `payment`, `from`, `to`, `sort`, `
 
 Deploy three resources: a PostgreSQL database, a Node web service for the API, and a Static Site for the Vite frontend. Connect the services to the GitHub repository and use the `react-retain-app` directory as the root directory for both app services.
 
+Public application: [https://retain-app-1.onrender.com](https://retain-app-1.onrender.com)
+
 ### API web service
 
 - Build command: `npm install`

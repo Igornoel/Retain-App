@@ -15,3 +15,9 @@ The application and full setup guide are in [`react-retain-app/`](react-retain-a
 If Vite selects a different port because the usual one is busy, add that origin to `CLIENT_ORIGIN` in `react-retain-app/.env` (comma-separated) and restart the API. Do not commit `.env` or use its local database credentials for production.
 
 See the [application README](react-retain-app/README.md) for features, admin setup, API routes, and deployment configuration.
+
+## Deploy on Render
+
+Deploy three resources: a PostgreSQL database, a Node web service for the API, and a Static Site for the Vite frontend. Connect the services to the GitHub repository and use the `react-retain-app` directory as the root directory for both app services.
+
+Public application: [https://retain-app-1.onrender.com](https://retain-app-1.onrender.com)
